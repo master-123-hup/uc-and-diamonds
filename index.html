@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <!-- كود تثبيت التطبيق PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffba00">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+    </script>
+<meta name="monetag" content="cdc697027f5ef9cb31a85a3604fbf4fc">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Rewards Center</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        :root { --primary: #ffba00; --bg: #0a0a0a; --card: #1a1a1a; --text: #ffffff; --gray: #888; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 70px; overflow-x: hidden; }
+        
+        /* Header */
+        .header { background: var(--card); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 50; }
+        .header h1 { font-size: 18px; color: var(--primary); }
+        .balance { background: #000; padding: 5px 15px; border-radius: 20px; border: 1px solid var(--primary); font-weight: bold; }
+        .balance span { color: var(--primary); }
+
+        /* Buttons */
+        .btn { background: var(--primary); color: #000; border: none; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; text-align: center; display: block; margin-bottom: 10px; }
+        .btn:active { transform: scale(0.98); }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        
+        /* Pages */
+        .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Product Cards */
+        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .card.best { border-color: var(--primary); position: relative; }
+        .card.best::after { content: 'أفضل قيمة'; position: absolute; top: -10px; right: 15px; background: var(--primary); color: #000; font-size: 10px; padding: 2px 8px; border-radius: 5px; font-weight: bold; }
+        .card-info h3 { color: var(--primary); font-size: 18px; margin-bottom: 5px; }
+        .card-info p { color: var(--gray); font-size: 13px; }
+
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #111; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #222; z-index: 100; }
+        .nav-item { text-align: center; color: var(--gray); font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item .icon { font-size: 20px; display: block; margin-bottom: 3px; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; justify-content: center; align-items: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid var(--primary); text-align: center; }
+        .modal-content input { width: 100%; padding: 12px; margin: 15px 0; background: #000; border: 1px solid #444; color: #fff; border-radius: 8px; text-align: center; font-size: 16px; }
+        
+        /* Orders */
+        .order-item { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-right: 4px solid var(--gray); }
+        .order-item.pending { border-right-color: var(--primary); }
+        .order-item.approved { border-right-color: #00c853; }
+        .order-item.rejected { border-right-color: #ff1744; }
+        .order-item h4 { font-size: 14px; margin-bottom: 5px; }
+        .order-item p { font-size: 12px; color: var(--gray); }
+
+        /* Login Screen */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; padding: 20px; }
+        #login-screen h2 { color: var(--primary); margin-bottom: 20px; }
+        
+        /* Admin */
+        #admin-panel { display: none; padding: 20px; }
+        .admin-row { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; margin-bottom: 10px; border-radius: 8px; font-size: 13px; }
+        .admin-btn { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-green { background: #00c853; color: #fff; }
+        .btn-red { background: #ff1744; color: #fff; }
+        /* تصميم شاشة تسجيل الدخول الفخم */
+        #login-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle at 50% 30%, #2a1b00 0%, #0a0a0a 70%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 999; padding: 20px; text-align: center; overflow: hidden;
+        }
+        /* إضافة تأثير توهج خلفي */
+        #login-screen::before {
+            content: ''; position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 200px; background: #ffba00; filter: blur(100px); opacity: 0.2; border-radius: 50%;
+        }
+        
+        .login-logo { font-size: 38px; font-weight: 900; margin-bottom: 25px; text-shadow: 0 0 25px rgba(255, 186, 0, 0.6); z-index: 1; font-family: 'Arial Black', sans-serif;}
+        
+        .login-features { display: flex; gap: 12px; margin-bottom: 35px; z-index: 1; }
+        .feature-item { 
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 186, 0, 0.3); 
+            backdrop-filter: blur(10px);
+            padding: 12px 15px; border-radius: 15px; font-size: 13px; font-weight: bold;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .feature-item span { font-size: 28px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)); }
+        
+        .login-title { color: #fff; font-size: 22px; margin-bottom: 10px; font-weight: 900; z-index: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        .login-subtitle { color: #bbb; font-size: 14px; margin-bottom: 40px; max-width: 85%; line-height: 1.6; z-index: 1; }
+        
+        .google-btn { 
+            background: linear-gradient(to right, #ffffff, #f0f0f0); 
+            color: #222; border: none; padding: 16px 25px; border-radius: 15px; 
+            font-size: 17px; font-weight: 900; display: flex; align-items: center; justify-content: center; 
+            width: 100%; max-width: 320px; cursor: pointer; 
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.15); transition: 0.3s; z-index: 1;
+        }
+        .google-btn:active { transform: scale(0.95); box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1); }
+        .google-btn svg { margin-left: 12px; }
+        
+        .login-footer { color: #777; font-size: 12px; margin-top: 35px; z-index: 1; }
+                /* تصميم التنبيهات المخصصة (Custom Toast) */
+        #custom-toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(26, 26, 26, 0.95); border: 1px solid var(--primary);
+            color: #fff; padding: 12px 25px; border-radius: 30px;
+            font-size: 14px; font-weight: bold; z-index: 9999;
+            box-shadow: 0 5px 15px rgba(255, 186, 0, 0.2);
+            display: none; text-align: center; min-width: 200px;
+            backdrop-filter: blur(5px);
+        }
+        #custom-toast.show { display: block; animation: toastFadeIn 0.3s ease; }
+        @keyframes toastFadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    </style>
+</head>
+<body>
+<div id="custom-toast"></div>
+<div style="background: #222; color: #ccc; text-align: center; padding: 8px; font-size: 11px; border-bottom: 1px solid #333;">غير تابع لـ Garena أو PUBG - شحن يدوي مقابل النقاط</div>
+<!-- شاشة تسجيل الدخول -->
+<!-- شاشة تسجيل الدخول الاحترافية -->
+<div id="login-screen">
+        <div class="login-logo">
+        <span style="color:#ffba00;">My Rewards</span> Center
+    </div>
+    
+    <div class="login-features">
+        <div class="feature-item"><span>💎</span> جواهر</div>
+        <div class="feature-item"><span>🎟️</span> شدات</div>
+        <div class="feature-item"><span>📦</span> باقات</div>
+        <div class="feature-item"><span>🔥</span> باس</div>
+    </div>
+
+    <h2 class="login-title">مرحباً بك في متجر الجواهر</h2>
+    <p class="login-subtitle">أكمل العروض واجمع النقاط لشحن حسابك مجاناً</p>
+
+    <button class="google-btn" onclick="loginWithGoogle()">
+        <svg width="20" height="20" viewBox="0 0 48 48" style="margin-left: 10px;">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+        </svg>
+        تسجيل الدخول باستخدام Google
+    </button>
+    
+    <p class="login-footer">يجب تسجيل الدخول لحفظ نقاطك وتجنب ضياعها</p>
+</div>
+<!-- الشريط العلوي (يحتوي على الشعار السري) -->
+<div class="header" id="main-header" style="display:none;">
+    <h1 id="secret-admin-logo" style="cursor: pointer; -webkit-tap-highlight-color: transparent;">My Rewards</h1>
+    <div class="balance">رصيدك: <span id="user-points">0</span> نقطة</div>
+</div>
+<!-- الصفحة الرئيسية الجديدة -->
+<div id="page-home" class="page active" style="display:none;">
+        <div class="home-wallet" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a); border: 1px solid #ffba00; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px;">
+        <h2 id="home-points" style="font-size: 28px; color: #ffba00; margin-bottom: 5px;">0</h2>
+        <p style="color: #888; font-size: 14px;">رصيدي الحالي (نقطة)</p>
+    </div>
+    <button class="btn" onclick="startEarning()" style="padding: 20px; font-size: 18px;">ابدأ ربح النقاط الآن 💰</button>
+    <h3 style="color: #888; margin: 20px 0 10px; font-size: 14px;">كيف يعمل التطبيق؟</h3>
+    <div class="step-card" style="display: flex; align-items: center; background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 4px solid #ffba00;">
+        <div style="font-size: 24px; margin-left: 15px;">🎮</div>
+        <div><h4 style="font-size: 15px; margin-bottom: 3px;">1. أكمل العروض</h4><p style="font-size: 12px; color: #888;">اختر عروضاً من شركائنا وأكملها</p></div>
+    </div>
+    <div class="step-card" style="display: flex; align-items: center; background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 4px solid #ffba00;">
+        <div style="font-size: 24px; margin-left: 15px;">💎</div>
+        <div><h4 style="font-size: 15px; margin-bottom: 3px;">2. اجمع النقاط</h4><p style="font-size: 12px; color: #888;">ستضاف النقاط لحسابك فور التأكيد</p></div>
+    </div>
+    <div class="step-card" style="display: flex; align-items: center; background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 4px solid #ffba00;">
+        <div style="font-size: 24px; margin-left: 15px;">🎁</div>
+        <div><h4 style="font-size: 15px; margin-bottom: 3px;">3. حولها جواهر</h4><p style="font-size: 12px; color: #888;">استبدل نقاطك بجواهر فري فاير في المتجر</p></div>
+    </div>
+</div>
+
+<!-- صفحة المهام الجديدة -->
+<div id="page-tasks" class="page" style="display:none;">
+    <h2 style="color:#ffba00; margin-bottom:20px; text-align:center;">المهام والعروض</h2>
+    <div class="card" style="text-align:center; display:block; background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333;">
+        <p style="margin-bottom:10px; color:#888;">رصيدك الحالي للبدء:</p>
+        <h3 style="color:#ffba00; font-size:24px; margin-bottom:15px;"><span class="tasks-points">0</span> نقطة</h3>
+        <button class="btn btn-outline" onclick="updateUI()" style="border: 2px solid #ffba00; color: #ffba00; background: transparent;">🔄 تحديث الرصيد</button>
+    </div>
+    <div style="text-align:center; margin-top:30px;">
+        <button class="btn" onclick="startEarning()">فتح قائمة العروض 📋</button>
+    </div>
+</div>
+<!-- صفحة المتجر -->
+<div id="page-store" class="page" style="display:none;">
+    <h2 style="color:var(--primary); margin-bottom:20px; text-align:center;">متجر الشحن</h2>
+    
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <div class="store-tab active" id="tab-freefire" onclick="switchStore('freefire')" style="flex:1; padding:10px; text-align:center; background:var(--primary); color:#000; border-radius:8px; cursor:pointer; font-weight:bold;">فري فاير 💎</div>
+        <div class="store-tab" id="tab-pubg" onclick="switchStore('pubg')" style="flex:1; padding:10px; text-align:center; background:var(--card); color:#fff; border:1px solid #333; border-radius:8px; cursor:pointer; font-weight:bold;">ببجي 🎯</div>
+    </div>
+
+    <!-- منتجات فري فاير -->
+    <div id="store-freefire">
+    
+    <div class="card" onclick="openRedeem('100 جوهرة + 10 هدية', 100)">
+        <div class="card-info"><h3>100 جوهرة + 10 🎁</h3><p>100 نقطة</p></div>
+        <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+    </div>
+    <div class="card best" onclick="openRedeem('200 جوهرة + 31 هدية', 200)">
+        <div class="card-info"><h3>200 جوهرة + 31 🎁</h3><p>200 نقطة</p></div>
+        <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+    </div>
+    <div class="card" onclick="openRedeem('500 جوهرة + 70 هدية', 500)">
+        <div class="card-info"><h3>500 جوهرة + 70 🎁</h3><p>500 نقطة</p></div>
+        <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+    </div>
+    <div class="card" onclick="openRedeem('1060 جوهرة + 100 هدية', 1000)">
+        <div class="card-info"><h3>1060 جوهرة + 100 🎁</h3><p>1000 نقطة</p></div>
+        <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+    </div>
+           <!-- PUBG Mobile Products -->
+    <div id="store-pubg" style="display:none;">
+        <div class="card" onclick="openRedeem('PUBG Mobile: 60 UC', 100)">
+            <div class="card-info"><h3>60 UC</h3><p>100 نقطة</p></div>
+            <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+        </div>
+        <div class="card best" onclick="openRedeem('PUBG Mobile: 325 UC', 500)">
+            <div class="card-info"><h3>325 UC</h3><p>500 نقطة</p></div>
+            <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+        </div>
+        <div class="card" onclick="openRedeem('PUBG Mobile: 660 UC', 1000)">
+            <div class="card-info"><h3>660 UC</h3><p>1000 نقطة</p></div>
+            <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
+        </div>
+    </div>
+</div> <!-- إغلاق صفحة المتجر --> 
+</div>
+
+<!-- صفحة طلباتي -->
+<div id="page-orders" class="page" style="display:none;">
+    <h2 style="color:var(--primary); margin-bottom:20px; text-align:center;">طلباتي</h2>
+    <div id="orders-list">
+        <p style="text-align:center; color:var(--gray);">لا توجد طلبات سابقة.</p>
+    </div>
+</div>
+
+<!-- صفحة الملف الشخصي -->
+<div id="page-profile" class="page" style="display:none;">
+    <h2 style="color:var(--primary); margin-bottom:20px; text-align:center;">الملف الشخصي</h2>
+    <div class="card" style="flex-direction:column; align-items:flex-start;">
+        <p style="margin-bottom:10px;">البريد الإلكتروني: <span id="prof-email" style="color:var(--primary);"></span></p>
+        <p style="margin-bottom:10px;">اسم اللاعب: <span id="prof-name" style="color:var(--primary); font-weight:bold;">مستخدم جديد</span></p>
+                <button class="btn btn-outline" style="width: 100%; padding: 8px; font-size: 12px; margin-bottom: 10px;" onclick="changePlayerName()">✏️ تغيير الاسم</button>
+        <p style="margin-bottom:10px;">رصيد النقاط: <span id="prof-points" style="color:var(--primary);"></span></p>
+        <p style="margin-bottom:10px;">إجمالي الطلبات: <span id="prof-orders" style="color:var(--primary);">0</span></p>
+        <p style="margin-bottom:10px;">ID اللاعب: <span id="prof-ffid" style="color:var(--primary);">غير مسجل</span></p>
+    </div>
+    <button class="btn btn-outline" onclick="logout()">تسجيل خروج</button>
+</div>
+
+<!-- لوحة الأدمن المخفية -->
+<div id="admin-panel" style="display:none; padding: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="color:#ff1744;">لوحة الإدارة</h2>
+        <button class="btn" style="width:auto; padding:5px 15px; margin:0; background:#333; color:#fff;" onclick="logout()">خروج</button>
+    </div>
+    
+    <!-- الإحصائيات -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <div class="card" style="flex:1; text-align:center; padding:10px; display:block;">
+            <p style="color:#888; font-size:12px;">المستخدمين</p>
+            <h3 style="color:#ffba00;" id="stat-users">0</h3>
+        </div>
+        <div class="card" style="flex:1; text-align:center; padding:10px; display:block;">
+            <p style="color:#888; font-size:12px;">الطلبات</p>
+            <h3 style="color:#ffba00;" id="stat-orders">0</h3>
+        </div>
+    </div>
+
+        <!-- أزرار التنقل داخل الأدمن -->
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <button class="btn" onclick="showAdminTab('orders')" id="btn-tab-orders" style="padding:10px; font-size:14px;">الطلبات</button>
+        <button class="btn btn-outline" onclick="showAdminTab('users')" id="btn-tab-users" style="padding:10px; font-size:14px;">اللاعبين</button>
+    </div>
+
+    <!-- قسم الطلبات -->
+    <div id="admin-tab-orders">
+        <!-- أزرار الفلترة -->
+        <div style="display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto;">
+            <button class="btn btn-outline" id="filter-all" onclick="filterOrders('all')" style="padding:8px; font-size:12px; white-space:nowrap; flex:1;">الكل</button>
+            <button class="btn btn-outline" id="filter-pending" onclick="filterOrders('pending')" style="padding:8px; font-size:12px; white-space:nowrap; flex:1;">قيد الانتظار (<span id="count-pending">0</span>)</button>
+            <button class="btn btn-outline" id="filter-approved" onclick="filterOrders('approved')" style="padding:8px; font-size:12px; white-space:nowrap; flex:1;">مقبول (<span id="count-approved">0</span>)</button>
+            <button class="btn btn-outline" id="filter-rejected" onclick="filterOrders('rejected')" style="padding:8px; font-size:12px; white-space:nowrap; flex:1;">مرفوض (<span id="count-rejected">0</span>)</button>
+        </div>
+
+        <div id="admin-orders-list"></div>
+    </div>
+
+    <!-- قسم اللاعبين -->
+    <div id="admin-tab-users" style="display:none;">
+        <div id="admin-users-list"></div>
+    </div>
+</div>
+
+
+<!-- شريط التنقل السفلي -->
+<div class="bottom-nav" id="main-nav" style="display:none;">
+    <div class="nav-item active" onclick="navTo('home', this)"><span class="icon">🏠</span>الرئيسية</div>
+    <div class="nav-item" onclick="navTo('store', this)"><span class="icon">🛒</span>المتجر</div>
+    <div class="nav-item" onclick="navTo('orders', this)"><span class="icon">📦</span>طلباتي</div>
+    <div class="nav-item" onclick="navTo('tasks', this)"><span class="icon">📋</span>المهام</div>
+    <div class="nav-item" onclick="navTo('profile', this)"><span class="icon">👤</span>الملف</div>
+</div>
+
+<!-- نافذة الشراء -->
+<div id="redeem-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="color:var(--primary);">تأكيد الطلب</h3>
+        <p style="font-size:14px; margin:10px 0;" id="modal-item-name"></p>
+                <p style="font-size:12px; color:var(--gray);">أدخل Game UID (رقم الحساب)</p>
+        <input type="number" id="game-id-input" placeholder="مثال: 12345678">
+        <button class="btn" onclick="confirmRedeem()">تأكيد وإرسال الطلب</button>
+        <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+    </div>
+</div>
+<!-- نافذة كلمة مرور الأدمن -->
+<div id="admin-login-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="color:#ff1744; margin-bottom:15px;">لوحة الإدارة السرية</h3>
+        
+        <input type="email" id="admin-email-input" placeholder="البريد الإلكتروني للإدارة" style="margin-bottom:10px;">
+        <input type="password" id="admin-pass-input" placeholder="كلمة المرور" style="margin-bottom:15px;">
+        
+        <button class="btn" id="admin-login-btn" onclick="checkAdminPassword()">دخول آمن</button>
+        <button class="btn btn-outline" onclick="window.location.href='/'">إلغاء</button>
+    </div>
+</div>
+<!-- نافذة تعديل النقاط المخصصة (جديدة وفخمة) -->
+<div id="edit-points-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="color:var(--primary); margin-bottom: 10px;">تعديل نقاط اللاعب</h3>
+        <p style="color:#888; font-size:12px; margin-bottom:15px;">أدخل الرقم (موجب للإضافة، سالب للخصم)</p>
+        <input type="number" id="edit-points-input" placeholder="مثال: 500 أو -100">
+        <button class="btn" onclick="confirmChangePoints()">تأكيد التعديل</button>
+        <button class="btn btn-outline" onclick="document.getElementById('edit-points-modal').classList.remove('show')">إلغاء</button>
+    </div>
+</div>
+<!-- نافذة الترحيب للمستخدم الجديد -->
+<div id="welcome-modal" class="modal">
+    <div class="modal-content" style="text-align: center;">
+        <h3 style="color:var(--primary); margin-bottom: 15px;">أهلاً بك في التطبيق! 🎉</h3>
+        <p style="color:#888; font-size:14px; margin-bottom: 20px;">يرجى كتابة اسمك (أو لقبك في اللعبة) لكي نتمكن من التواصل معك.</p>
+        <input type="text" id="welcome-name-input" placeholder="اكتب اسمك هنا..." style="margin-bottom: 15px;">
+        <button class="btn" onclick="saveInitialName()">حفظ الاسم والدخول</button>
+    </div>
+</div>
+<script>
+    // ================== 1. إعدادات Firebase ==================
+    // ضع هنا بيانات Firebase الخاصة بك من لوحة تحكم Firebase
+        const firebaseConfig = {
+      apiKey: "AIzaSyAzsWOxeIt2kMmsVQ2nLWxHzYVyqdzw_LE",
+      authDomain: "free-fire-diamond-31e94.firebaseapp.com",
+      projectId: "free-fire-diamond-31e94",
+      storageBucket: "free-fire-diamond-31e94.firebasestorage.app",
+      messagingSenderId: "70410300083",
+      appId: "1:70410300083:web:0f6af46115ea9266a7dec6"
+    };
+
+    // تهيئة Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // متغيرات عامة
+    let currentUser = null;
+    let userData = { points: 0, ffid: "", orders: 0 };
+    let selectedItem = null;
+        
+
+    // ================== 2. نظام المصادقة ==================
+        function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        // استخدام Popup يظهر الحسابات المسجلة في الجهاز
+        auth.signInWithPopup(provider)
+            .then((result) => {
+                // تم تسجيل الدخول بنجاح
+                console.log("تم الدخول:", result.user.displayName);
+            })
+            .catch((error) => {
+                // إذا كان المتصفح يمنع النوافذ المنبثقة، نستخدم Redirect
+                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+                    auth.signInWithRedirect(provider);
+                } else {
+                    showToast("حدث خطأ أثناء تسجيل الدخول: " + error.message);
+                }
+            });
+    }
+
+                auth.onAuthStateChanged(user => {
+        if (user) {
+            currentUser = user;
+            
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) loginScreen.style.display = 'none';
+            
+            const mainHeader = document.getElementById('main-header');
+            if (mainHeader) mainHeader.style.display = 'flex';
+            
+            const mainNav = document.getElementById('main-nav');
+            if (mainNav) mainNav.style.display = 'flex';
+            
+            const pageHome = document.getElementById('page-home');
+            if (pageHome) {
+                pageHome.classList.add('active');
+                pageHome.style.display = 'block';
+            }
+
+            const profEmail = document.getElementById('prof-email');
+            if (profEmail) profEmail.innerText = user.email;
+            
+            db.collection("users").doc(user.uid).onSnapshot(doc => {
+                if (!doc.exists) {
+                    // حساب جديد
+                    db.collection("users").doc(user.uid).set({ 
+                        points: 0, 
+                        ffid: "", 
+                        ordersCount: 0, 
+                        status: "active",
+                        email: user.email || "غير متوفر", 
+                        username: "" // نتركه فارغاً حتى يكتبه
+                    });
+                    // إظهار نافذة طلب الاسم
+                    document.getElementById('welcome-modal').classList.add('show');
+                } else {
+                    userData = doc.data();
+                    
+                    // إذا كان الحساب قديماً ولا يحتوي على بريد، حدثه
+                    if(!userData.email && user.email) {
+                        db.collection("users").doc(user.uid).update({ 
+                            email: user.email
+                        });
+                    }
+                    
+                    // إذا لم يكن لديه اسم، أظهر النافذة
+                    if (!userData.username || userData.username.trim() === "") {
+                        document.getElementById('welcome-modal').classList.add('show');
+                    }
+                    
+                    updateUI();
+                }
+            });
+            
+            checkAdminPanel();
+        } else {
+            // ... (باقي كود تسجيل الخروج كما هو)
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) loginScreen.style.display = 'flex';
+            const mainHeader = document.getElementById('main-header');
+            if (mainHeader) mainHeader.style.display = 'none';
+            const mainNav = document.getElementById('main-nav');
+            if (mainNav) mainNav.style.display = 'none';
+            document.querySelectorAll('.page').forEach(p => { if(p) p.style.display = 'none'; });
+        }
+    });
+
+    function logout() {
+        auth.signOut().then(() => location.reload());
+    }
+
+    // ================== 3. الواجهة والتنقل ==================
+            function updateUI() {
+        if(!userData) return;
+        const points = userData.points || 0;
+        
+        // تحديث الأرصدة في كل مكان (نقاط فقط)
+        const userPointsEl = document.getElementById('user-points');
+        if(userPointsEl) userPointsEl.innerText = points;
+        
+        const homePointsEl = document.getElementById('home-points');
+        if(homePointsEl) homePointsEl.innerText = points;
+        
+        const tasksPoints = document.querySelector('.tasks-points');
+        if(tasksPoints) tasksPoints.innerText = points;
+
+        const profPoints = document.getElementById('prof-points');
+        if(profPoints) profPoints.innerText = points;
+        
+        const profFfid = document.getElementById('prof-ffid');
+        if(profFfid) profFfid.innerText = userData.ffid || "غير مسجل";
+        
+        const profOrders = document.getElementById('prof-orders');
+        if(profOrders) profOrders.innerText = userData.ordersCount || 0;
+        
+        const profEmail = document.getElementById('prof-email');
+        if(profEmail && currentUser) profEmail.innerText = currentUser.email;
+        
+        const profName = document.getElementById('prof-name');
+        if(profName) profName.innerText = userData.username || "مستخدم جديد";
+    }
+
+    function switchStore(store) {
+        document.getElementById('store-freefire').style.display = 'none';
+        document.getElementById('store-pubg').style.display = 'none';
+        document.getElementById('tab-freefire').style.background = 'var(--card)';
+        document.getElementById('tab-freefire').style.color = '#fff';
+        document.getElementById('tab-freefire').style.border = '1px solid #333';
+        document.getElementById('tab-pubg').style.background = 'var(--card)';
+        document.getElementById('tab-pubg').style.color = '#fff';
+        document.getElementById('tab-pubg').style.border = '1px solid #333';
+
+        if(store === 'freefire') {
+            document.getElementById('store-freefire').style.display = 'block';
+            document.getElementById('tab-freefire').style.background = 'var(--primary)';
+            document.getElementById('tab-freefire').style.color = '#000';
+            document.getElementById('tab-freefire').style.border = 'none';
+        } else {
+            document.getElementById('store-pubg').style.display = 'block';
+            document.getElementById('tab-pubg').style.background = 'var(--primary)';
+            document.getElementById('tab-pubg').style.color = '#000';
+            document.getElementById('tab-pubg').style.border = 'none';
+        }
+    }
+        function navTo(pageId, el) {
+        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+        const targetPage = document.getElementById('page-' + pageId);
+        if(targetPage) targetPage.style.display = 'block';
+        
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (el) el.classList.add('active');
+        
+        if(pageId === 'orders') loadOrders();
+    }
+
+    // ================== 4. المتجر والشراء ==================
+    function openRedeem(itemName, cost) {
+        if (userData.points < cost) {
+            showToast("عذراً، نقاطك غير كافية!");
+            return;
+        }
+        selectedItem = { name: itemName, cost: cost };
+        document.getElementById('modal-item-name').innerText = itemName + " (" + cost + " نقطة)";
+        document.getElementById('redeem-modal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('redeem-modal').classList.remove('show');
+         document.getElementById('game-id-input').value = '';
+        selectedItem = null;
+    }
+
+    function confirmRedeem() {
+                const ffId = document.getElementById('game-id-input').value.trim();
+        if (ffId.length < 8) {
+            showToast("يجب أن يكون ID فري فاير مكوناً من 8 أرقام على الأقل!");
+            return;
+        }
+
+        if (userData.points < selectedItem.cost) {
+            showToast("نقاطك غير كافية.");
+            return;
+        }
+
+        // تحديث النقاط وإنشاء الطلب
+        const newPoints = userData.points - selectedItem.cost;
+        const orderRef = db.collection("orders").doc();
+        
+        db.runTransaction(transaction => {
+            return transaction.get(db.collection("users").doc(currentUser.uid)).then(doc => {
+                if (!doc.exists) throw "المستخدم غير موجود";
+                
+                // خصم النقاط
+                transaction.update(db.collection("users").doc(currentUser.uid), { 
+                    points: newPoints,
+                    ffid: ffId,
+                    ordersCount: (userData.ordersCount || 0) + 1
+                });
+
+                // إضافة الطلب
+                transaction.set(orderRef, {
+                    userId: currentUser.uid,
+                    email: currentUser.email,
+                    ffid: ffId,
+                    item: selectedItem.name,
+                    cost: selectedItem.cost,
+                    status: "pending",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+        }).then(() => {
+            closeModal();
+            showToast("✅ تم إرسال طلبك بنجاح! يمكنك تتبع حالته في صفحة طلباتي.");
+        }).catch(err => {
+            showToast("حدث خطأ: " + err.message);
+        });
+    }
+
+    // ================== 5. عرض الطلبات ==================
+    function loadOrders() {
+        const ordersList = document.getElementById('orders-list');
+        ordersList.innerHTML = '<p style="text-align:center; color:var(--gray);">جاري التحميل...</p>';
+        
+        db.collection("orders").where("userId", "==", currentUser.uid).orderBy("timestamp", "desc").onSnapshot(snapshot => {
+            ordersList.innerHTML = '';
+            if (snapshot.empty) {
+                ordersList.innerHTML = '<p style="text-align:center; color:var(--gray);">لا توجد طلبات سابقة.</p>';
+                return;
+            }
+            snapshot.forEach(doc => {
+                const order = doc.data();
+                let statusText = order.status === 'pending' ? 'قيد الانتظار' : (order.status === 'approved' ? 'مقبول' : 'مرفوض');
+                ordersList.innerHTML += `
+                    <div class="order-item ${order.status}">
+                        <h4>${order.item}</h4>
+                        <p>ID: ${order.ffid}</p>
+                        <p>الحالة: ${statusText}</p>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // تحديث الطلبات عند فتح الصفحة
+    document.querySelector('.nav-item:nth-child(3)').addEventListener('click', loadOrders);
+
+    // ================== 6. Lootably Integration ==================
+        function startEarning() {
+        // التحقق من أن المستخدم مسجل دخول
+        if (!currentUser) {
+            showToast("الرجاء تسجيل الدخول أولاً");
+            return;
+        }
+
+        // استخدام بريد المستخدم كمعرف فريد (آمن وبسيط)
+        const userId = currentUser.uid; 
+        const userEmail = currentUser.email || "noemail@test.com";
+        const userName = userData.username || "Player";
+
+        // إنشاء رابط الـ Offerwall (بدون الهاش السري حالياً لتجنب الأخطاء)
+        const cpxUrl = `https://offers.cpx-research.com/index.php?app_id=37431&ext_user_id=${userId}&username=${userName}&email=${userEmail}`;
+
+        // فتح الرابط في نافذة جديدة أو داخل التطبيق
+        window.open(cpxUrl, '_blank');
+    }
+
+    // ================== 7. لوحة الأدمن المخفية ==================
+           function checkAdminPanel() {
+        // إذا كان الرابط هو رابط الأدمن
+        if (window.location.pathname.includes('/admin-xyz123')) {
+            // إخفاء كل واجهات المستخدم
+            const mainNav = document.getElementById('main-nav');
+            if(mainNav) mainNav.style.display = 'none';
+            const mainHeader = document.getElementById('main-header');
+            if(mainHeader) mainHeader.style.display = 'none';
+            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            const loginScreen = document.getElementById('login-screen');
+            if(loginScreen) loginScreen.style.display = 'none';
+
+            // إظهار نافذة دخول الأدمن
+            document.getElementById('admin-login-modal').classList.add('show');
+        }
+    } 
+
+        function checkAdminPassword() {
+        const email = document.getElementById('admin-email-input').value;
+        const pass = document.getElementById('admin-pass-input').value;
+        const btn = document.getElementById('admin-login-btn');
+
+        if(!email || !pass) {
+            showToast("الرجاء إدخال البريد وكلمة المرور");
+            return;
+        }
+
+        btn.innerText = "جاري التحقق...";
+        btn.disabled = true;
+
+        // استخدام Firebase للتحقق من الحساب السري
+        auth.signInWithEmailAndPassword(email, pass)
+            .then((userCredential) => {
+                // إذا نجح الدخول
+                document.getElementById('admin-login-modal').classList.remove('show');
+                document.getElementById('admin-panel').style.display = 'block';
+                loadAdminOrders();
+            })
+            .catch((error) => {
+                // إذا فشل الدخول (كلمة مرور خاطئة أو الحساب غير موجود)
+                showToast("خطأ في البريد أو كلمة المرور!");
+                btn.innerText = "دخول آمن";
+                btn.disabled = false;
+            });
+    }
+
+            let allAdminOrders = []; // مصفوفة لحفظ كل الطلبات
+
+    function loadAdminOrders() {
+        const adminOrders = document.getElementById('admin-orders-list');
+        adminOrders.innerHTML = '<p style="text-align:center; color:#888;">جاري التحميل...</p>';
+        
+        db.collection("orders").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+            allAdminOrders = []; // تفريغ المصفوفة
+            let pendingCount = 0, approvedCount = 0, rejectedCount = 0;
+
+            snapshot.forEach(doc => {
+                const order = doc.data();
+                order.id = doc.id; // حفظ الـ ID
+                allAdminOrders.push(order); // إضافة الطلب للمصفوفة
+                
+                // حساب العدادت
+                if(order.status === 'pending') pendingCount++;
+                else if(order.status === 'approved') approvedCount++;
+                else if(order.status === 'rejected') rejectedCount++;
+            });
+
+            // تحديث الأرقام بجانب الأزرار
+            document.getElementById('count-pending').innerText = pendingCount;
+            document.getElementById('count-approved').innerText = approvedCount;
+            document.getElementById('count-rejected').innerText = rejectedCount;
+            document.getElementById('stat-orders').innerText = snapshot.size;
+
+            // عرض الطلبات (افتراضياً يظهر الكل)
+            filterOrders('all');
+        });
+
+        // تحميل إحصائيات المستخدمين
+        db.collection("users").onSnapshot(snapshot => {
+            document.getElementById('stat-users').innerText = snapshot.size;
+        });
+    }
+
+    // دالة الفلترة
+    function filterOrders(status) {
+        const adminOrders = document.getElementById('admin-orders-list');
+        adminOrders.innerHTML = '';
+
+        // تغيير شكل الأزرار (الزر المختار يصبح ذهبياً)
+        document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+            btn.classList.remove('btn');
+            btn.classList.add('btn-outline');
+        });
+        document.getElementById('filter-' + status).classList.remove('btn-outline');
+        document.getElementById('filter-' + status).classList.add('btn');
+
+        // فلترة وعرض الطلبات
+        const filtered = status === 'all' ? allAdminOrders : allAdminOrders.filter(o => o.status === status);
+
+        if(filtered.length === 0) {
+            adminOrders.innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">لا توجد طلبات في هذا القسم.</p>';
+            return;
+        }
+
+        filtered.forEach(order => {
+            let statusColor = order.status === 'pending' ? '#ffba00' : (order.status === 'approved' ? '#00c853' : '#ff1744');
+            
+            // إخفاء أزرار القبول والرفض إذا كان الطلب مكتملاً
+            let actionButtons = '';
+            if(order.status === 'pending') {
+                actionButtons = `
+                    <button class="admin-btn btn-green" style="flex:1;" onclick="adminAction('${order.id}', 'approved', '${order.userId}', ${order.cost})">قبول الطلب</button>
+                    <button class="admin-btn btn-red" style="flex:1;" onclick="adminAction('${order.id}', 'rejected', '${order.userId}', ${order.cost})">رفض وإرجاع النقاط</button>
+                `;
+            } else {
+                actionButtons = `<p style="text-align:center; width:100%; font-size:12px; color:#888;">تمت معالجة هذا الطلب</p>`;
+            }
+
+            adminOrders.innerHTML += `
+                <div class="admin-row" style="border-right: 4px solid ${statusColor}; flex-direction: column; align-items: flex-start;">
+                    <div style="width:100%; display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <div>
+                            <p><b>الباقة:</b> ${order.item}</p>
+                            <p><b>ID اللاعب:</b> <span style="color:#ffba00">${order.ffid}</span></p>
+                            <p><b>البريد:</b> ${order.email}</p>
+                        </div>
+                        <div style="text-align:left;">
+                            <p style="color:${statusColor};"><b>${order.status === 'pending' ? 'قيد الانتظار' : (order.status === 'approved' ? 'مقبول' : 'مرفوض')}</b></p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:5px; width:100%;">
+                        ${actionButtons}
+                    </div>
+                </div>
+            `;
+        });
+    }
+        // ================== 8. المنطقة السرية للشعار (5 نقرات) ==================
+    let clickCount = 0;
+    let clickTimer;
+    const secretLogo = document.getElementById('secret-admin-logo');
+
+    if (secretLogo) {
+        secretLogo.addEventListener('click', function() {
+            clickCount++;
+            clearTimeout(clickTimer);
+            
+            // إعادة العداد إلى الصفر إذا توقف عن النقر لمدة ثانيتين
+            clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+
+            if (clickCount === 5) {
+                clickCount = 0; // تصفير العداد
+                
+                // إخفاء واجهة المستخدم
+                document.getElementById('main-nav').style.display = 'none';
+                document.getElementById('main-header').style.display = 'none';
+                document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+                
+                // إظهار نافذة تسجيل دخول الأدمن
+                document.getElementById('admin-login-modal').classList.add('show');
+            }
+        });
+    }
+        // ================== 11. إدارة اللاعبين داخل الأدمن ==================
+        function showAdminTab(tab) {
+        document.getElementById('admin-tab-orders').style.display = 'none';
+        document.getElementById('admin-tab-users').style.display = 'none';
+        document.getElementById('btn-tab-orders').classList.remove('btn');
+        document.getElementById('btn-tab-orders').classList.add('btn-outline');
+        document.getElementById('btn-tab-users').classList.remove('btn');
+        document.getElementById('btn-tab-users').classList.add('btn-outline');
+
+        if(tab === 'orders') {
+            document.getElementById('admin-tab-orders').style.display = 'block';
+            document.getElementById('btn-tab-orders').classList.remove('btn-outline');
+            document.getElementById('btn-tab-orders').classList.add('btn');
+        } else {
+            document.getElementById('admin-tab-users').style.display = 'block';
+            document.getElementById('btn-tab-users').classList.remove('btn-outline');
+            document.getElementById('btn-tab-users').classList.add('btn');
+            loadAdminUsers();
+        }
+    }
+
+    function loadAdminUsers() {
+        const usersList = document.getElementById('admin-users-list');
+        usersList.innerHTML = `
+            <div style="text-align:center; margin-bottom:10px;">
+                <button class="btn btn-outline" style="padding:5px; font-size:12px;" onclick="loadAdminUsers()">🔄 تحديث القائمة</button>
+            </div>
+            <p style="text-align:center; color:#888;">جاري التحميل...</p>
+        `;
+        
+        db.collection("users").get().then(snapshot => {
+            usersList.innerHTML = `
+                <div style="text-align:center; margin-bottom:10px;">
+                    <button class="btn btn-outline" style="padding:5px; font-size:12px;" onclick="loadAdminUsers()">🔄 تحديث القائمة</button>
+                </div>
+            `;
+            if (snapshot.empty) {
+                usersList.innerHTML += '<p style="text-align:center; color:#888;">لا يوجد لاعبين مسجلين.</p>';
+                return;
+            }
+            snapshot.forEach(doc => {
+                const user = doc.data();
+                const uId = doc.id;
+                usersList.innerHTML += `
+                    <div class="admin-row" style="flex-direction: column; align-items: flex-start; background: #151515; border: 1px solid #333; padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="width: 100%; margin-bottom: 10px;">
+                            <p style="margin-bottom:5px;"><b>البريد:</b> ${user.email || 'غير متوفر'}</p>
+                            <p style="margin-bottom:5px;"><b>الاسم:</b> <span style="color:var(--primary);">${user.username || 'مستخدم جديد'}</span></p>
+                            <p style="margin-bottom:5px;"><b>ID اللاعب:</b> <span style="color:var(--primary);">${user.ffid || 'لم يقم بالشحن بعد'}</span></p>
+                            <p><b>الرصيد الحالي:</b> <span style="color:var(--primary); font-size:16px;">${user.points || 0}</span> نقطة</p>
+                        </div>
+                        <div style="display:flex; gap:5px; width:100%;">
+                            <button class="admin-btn" style="flex:1; background:var(--primary); color:#000; padding: 8px;" onclick="promptChangePoints('${uId}')">تعديل النقاط</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // دالة إدخال النقاط المخصصة
+        let currentEditUserId = null;
+
+    function promptChangePoints(userId) {
+        currentEditUserId = userId;
+        document.getElementById('edit-points-input').value = '';
+        document.getElementById('edit-points-modal').classList.add('show');
+    }
+
+    function confirmChangePoints() {
+        const amount = document.getElementById('edit-points-input').value;
+        if(amount === "" || isNaN(amount)) {
+            showToast("الرجاء إدخال رقم صحيح");
+            return;
+        }
+        const numAmount = parseInt(amount);
+        
+        db.runTransaction(transaction => {
+            const userRef = db.collection("users").doc(currentEditUserId);
+            return transaction.get(userRef).then(doc => {
+                if (!doc.exists) throw "المستخدم غير موجود";
+                let newPoints = (doc.data().points || 0) + numAmount;
+                if(newPoints < 0) newPoints = 0; // منع الرصيد السالب
+                transaction.update(userRef, { points: newPoints });
+            });
+        }).then(() => {
+            showToast("✅ تم تعديل النقاط بنجاح!");
+            document.getElementById('edit-points-modal').classList.remove('show');
+            loadAdminUsers(); // تحديث القائمة
+        }).catch(err => showToast("خطأ: " + err.message));
+    }
+
+    
+        // ================== 12. دالة التنبيهات المخصصة ==================
+    let toastTimeout;
+    function showToast(message) {
+        const toast = document.getElementById('custom-toast');
+        toast.innerText = message;
+        toast.classList.add('show');
+        
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000); // تختفي بعد 3 ثواني
+    }
+        // دالة تغيير اسم اللاعب
+    function changePlayerName() {
+        const newName = prompt("أدخل اسمك الجديد:");
+        if (newName && newName.trim().length >= 3) {
+            db.collection("users").doc(currentUser.uid).update({
+                username: newName.trim()
+            }).then(() => {
+                showToast("✅ تم تغيير اسمك بنجاح!");
+                userData.username = newName.trim(); // تحديث فوري للواجهة
+                updateUI();
+            }).catch(err => {
+                showToast("خطأ في تغيير الاسم: " + err.message);
+            });
+        } else if (newName !== null) {
+            showToast("الاسم يجب أن يكون 3 أحرف على الأقل");
+        }
+    }
+        // ================== 13. حفظ اسم المستخدم الجديد ==================
+    function saveInitialName() {
+        const nameInput = document.getElementById('welcome-name-input').value.trim();
+        if (nameInput.length < 3) {
+            showToast("الرجاء كتابة اسم مكون من 3 أحرف على الأقل");
+            return;
+        }
+
+        // حفظ الاسم في قاعدة البيانات
+        db.collection("users").doc(currentUser.uid).update({
+            username: nameInput
+        }).then(() => {
+            // إخفاء النافذة وتحديث الواجهة
+            document.getElementById('welcome-modal').classList.remove('show');
+            showToast("تم حفظ الاسم بنجاح! أهلاً بك.");
+            userData.username = nameInput;
+            updateUI();
+        }).catch(err => {
+            showToast("حدث خطأ أثناء حفظ الاسم: " + err.message);
+        });
+    }
+        // ================== 14. دالة قبول ورفض الطلبات (تصحيح) ==================
+    function adminAction(orderId, status, userId, cost) {
+        if (status === 'approved') {
+            db.collection("orders").doc(orderId).update({ status: 'approved' })
+            .then(() => {
+                showToast("✅ تم قبول الطلب. يرجى شحن اللاعب يدوياً.");
+                loadAdminOrders(); // تحديث القائمة فوراً
+            }).catch(err => showToast("خطأ: " + err.message));
+            
+        } else if (status === 'rejected') {
+            db.runTransaction(transaction => {
+                const userRef = db.collection("users").doc(userId);
+                return transaction.get(userRef).then(doc => {
+                    const newPoints = (doc.data().points || 0) + cost;
+                    transaction.update(userRef, { points: newPoints });
+                    transaction.update(db.collection("orders").doc(orderId), { status: 'rejected' });
+                });
+            }).then(() => {
+                showToast("تم الرفض وإرجاع النقاط للمستخدم.");
+                loadAdminOrders(); // تحديث القائمة فوراً
+            }).catch(err => showToast("خطأ: " + err.message));
+        }
+    }
+</script>
+<!-- الفوتر (Footer) -->
+<footer style="text-align: center; padding: 20px; background: #111; color: #888; font-size: 12px; margin-top: 50px; border-top: 1px solid #333;">
+    <p style="margin-bottom: 10px;">&copy; 2026 Free Fire Diamond Rewards. All rights reserved.</p>
+    <div>
+        <a href="privacy.html" style="color: #ffba00; text-decoration: none; margin: 0 10px;">Privacy Policy</a> | 
+        <a href="terms.html" style="color: #ffba00; text-decoration: none; margin: 0 10px;">Terms & Conditions</a> | 
+        <a href="contact.html" style="color: #ffba00; text-decoration: none; margin: 0 10px;">Contact Us</a>
+    </div>
+</footer>
+</body>
+</html>
