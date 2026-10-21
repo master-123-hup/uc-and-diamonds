@@ -201,7 +201,7 @@
     </div>
         <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
         <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
-        <button class="btn" onclick="startEarning('cpagrip')" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
+        <button class="btn" onclick="openCPAGrip()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
     </div>
 </div>
 <!-- صفحة المتجر -->
@@ -639,7 +639,7 @@
     document.querySelector('.nav-item:nth-child(3)').addEventListener('click', loadOrders);
 
     // ================== 6. Lootably Integration ==================
-            function startEarning(provider) {
+                function startEarning(provider) {
         if (!currentUser) {
             showToast("الرجاء تسجيل الدخول أولاً");
             return;
@@ -653,12 +653,6 @@
             // رابط CPX Research
             const cpxUrl = `https://offers.cpx-research.com/index.php?app_id=37431&ext_user_id=${userId}&username=${userName}&email=${userEmail}`;
             window.open(cpxUrl, '_blank');
-            
-        } else if (provider === 'cpagrip') {
-            // رابط CPAGrip
-            // يجب التأكد من الـ wallId (1919303) وطريقة تمرير الـ user_id
-            const cpaUrl = `https://cpagrip.com/view.php?id=1919303&user_id=${userId}`;
-            window.open(cpaUrl, '_blank');
         }
     }
 
@@ -992,6 +986,21 @@
             }).catch(err => showToast("خطأ: " + err.message));
         }
     }
+   function openCPAGrip() {
+    if (!currentUser) {
+        showToast("الرجاء تسجيل الدخول أولاً");
+        return;
+    }
+    
+    // ⚠️ هنا تضع الرابط المباشر الذي نسخته في المرحلة الأولى
+const baseUrl = "https://www.cpagrip.com/common/offerwall.php?id=1919303";
+    
+    // إضافة tracking_id لكي نعرف لمن تُضاف النقاط
+    const finalUrl = baseUrl + "&tracking_id=" + currentUser.uid;
+    
+    // فتح الرابط في نافذة جديدة
+    window.open(finalUrl, '_blank');
+} 
 </script>
 <!-- الفوتر (Footer) -->
 <footer style="text-align: center; padding: 20px; background: #111; color: #888; font-size: 12px; margin-top: 50px; border-top: 1px solid #333;">
