@@ -199,8 +199,9 @@
         <h3 style="color:#ffba00; font-size:24px; margin-bottom:15px;"><span class="tasks-points">0</span> نقطة</h3>
         <button class="btn btn-outline" onclick="updateUI()" style="border: 2px solid #ffba00; color: #ffba00; background: transparent;">🔄 تحديث الرصيد</button>
     </div>
-    <div style="text-align:center; margin-top:30px;">
-        <button class="btn" onclick="startEarning()">فتح قائمة العروض 📋</button>
+        <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
+        <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
+        <button class="btn" onclick="startEarning('cpagrip')" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
     </div>
 </div>
 <!-- صفحة المتجر -->
@@ -227,11 +228,13 @@
         <div class="card-info"><h3>500 جوهرة + 70 🎁</h3><p>500 نقطة</p></div>
         <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
     </div>
-    <div class="card" onclick="openRedeem('1060 جوهرة + 100 هدية', 1000)">
+        <div class="card" onclick="openRedeem('1060 جوهرة + 100 هدية', 1000)">
         <div class="card-info"><h3>1060 جوهرة + 100 🎁</h3><p>1000 نقطة</p></div>
         <button class="btn" style="width:auto; padding:10px 20px; margin:0;">شراء</button>
     </div>
-           <!-- PUBG Mobile Products -->
+    </div> <!-- إغلاق div الخاص بـ store-freefire -->
+
+    <!-- PUBG Mobile Products -->
     <div id="store-pubg" style="display:none;">
         <div class="card" onclick="openRedeem('PUBG Mobile: 60 UC', 100)">
             <div class="card-info"><h3>60 UC</h3><p>100 نقطة</p></div>
@@ -636,23 +639,27 @@
     document.querySelector('.nav-item:nth-child(3)').addEventListener('click', loadOrders);
 
     // ================== 6. Lootably Integration ==================
-        function startEarning() {
-        // التحقق من أن المستخدم مسجل دخول
+            function startEarning(provider) {
         if (!currentUser) {
             showToast("الرجاء تسجيل الدخول أولاً");
             return;
         }
 
-        // استخدام بريد المستخدم كمعرف فريد (آمن وبسيط)
-        const userId = currentUser.uid; 
+        const userId = currentUser.uid;
         const userEmail = currentUser.email || "noemail@test.com";
         const userName = userData.username || "Player";
 
-        // إنشاء رابط الـ Offerwall (بدون الهاش السري حالياً لتجنب الأخطاء)
-        const cpxUrl = `https://offers.cpx-research.com/index.php?app_id=37431&ext_user_id=${userId}&username=${userName}&email=${userEmail}`;
-
-        // فتح الرابط في نافذة جديدة أو داخل التطبيق
-        window.open(cpxUrl, '_blank');
+        if (provider === 'cpx') {
+            // رابط CPX Research
+            const cpxUrl = `https://offers.cpx-research.com/index.php?app_id=37431&ext_user_id=${userId}&username=${userName}&email=${userEmail}`;
+            window.open(cpxUrl, '_blank');
+            
+        } else if (provider === 'cpagrip') {
+            // رابط CPAGrip
+            // يجب التأكد من الـ wallId (1919303) وطريقة تمرير الـ user_id
+            const cpaUrl = `https://cpagrip.com/view.php?id=1919303&user_id=${userId}`;
+            window.open(cpaUrl, '_blank');
+        }
     }
 
     // ================== 7. لوحة الأدمن المخفية ==================
