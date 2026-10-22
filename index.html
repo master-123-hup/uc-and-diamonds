@@ -204,7 +204,7 @@
     
     <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
         <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
-        <button class="btn" onclick="window.location.href = '?show_offers=true&user_id=' + currentUser.uid;" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
+        <button class="btn" onclick="loadCPAGripOffers()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
     </div>
 
     <!-- حاوية عروض CPAGrip (تظهر فقط عند الضغط على الزر) -->
@@ -382,24 +382,7 @@
 <script>
     
 
-        const offersBox = document.getElementById('cpagrip-offers-box');
         
-        // إظهار الصندوق ومسح أي محتوى سابق
-        offersBox.style.display = 'block';
-        offersBox.innerHTML = '';
-
-        // إنشاء وسم السكريبت (نفس كود CPAGrip الرسمي)
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        // نمرر tracking_id الخاص بالمستخدم
-        script.src = `https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}`;
-        
-        // حقن السكريبت داخل الصندوق
-        offersBox.appendChild(script);
-
-        // التمرير إلى الصندوق لكي يرى المستخدم العروض
-        offersBox.scrollIntoView({ behavior: 'smooth' });
-    }
     // ================== 1. إعدادات Firebase ==================
     // ضع هنا بيانات Firebase الخاصة بك من لوحة تحكم Firebase
         const firebaseConfig = {
@@ -1052,15 +1035,8 @@
         // التمرير إلى الصندوق لكي يرى المستخدم العروض
         offersBox.scrollIntoView({ behavior: 'smooth' });
     }    
-        // التحقق من وجود باراميتر العرض
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('show_offers') === 'true') {
-        const uid = urlParams.get('user_id');
-        if (uid) {
-            // هذا الجزء لتخزين الآيدي لكي يستخدمه السكريبت
-            localStorage.setItem('cpa_tracking_id', uid);
-        }
-    }
+
+    
 </script>
 <!-- الفوتر (Footer) -->
 <footer style="text-align: center; padding: 20px; background: #111; color: #888; font-size: 12px; margin-top: 50px; border-top: 1px solid #333;">
