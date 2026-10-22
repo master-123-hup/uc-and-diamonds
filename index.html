@@ -1068,42 +1068,31 @@ window.addEventListener('load', async () => {
         }
     }
 });
-function loadCPAGripOffers() {
+function openCPAGrip() {
+    // التحقق من تسجيل الدخول
     if (!currentUser) {
         showToast("الرجاء تسجيل الدخول أولاً");
         return;
     }
 
+    // إنشاء وسم السكريبت ديناميكياً (بدون فتح نافذة جديدة)
     const offersBox = document.getElementById('cpagrip-offers-box');
-    
+    if (!offersBox) return;
+
     // إظهار الصندوق ومسح أي محتوى سابق
     offersBox.style.display = 'block';
     offersBox.innerHTML = '';
 
-    // إنشاء وسم السكريبت (نفس كود CPAGrip الرسمي)
+    // إنشاء وسم السكريبت (الطريقة الصحيحة التي تظهر العروض داخل الصفحة)
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    // نمرر tracking_id الخاص بالمستخدم
     script.src = `https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}`;
     
-    // حقن السكريبت داخل الصندوق
+    // حقن السكريبت في الصندوق
     offersBox.appendChild(script);
 
-    // التمرير إلى الصندوق لكي يرى المستخدم العروض
+    // التمرير إلى الصندوق
     offersBox.scrollIntoView({ behavior: 'smooth' });
-}
-function openCPAGrip() {
-    // 3. التحقق من تسجيل الدخول
-    if (!currentUser) {
-        showToast("سجل دخول أولاً");
-        return;
-    }
-
-    // 2. بناء الرابط وإضافة tracking_id
-    const url = `https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}`;
-    
-    // فتح الرابط في تبويب جديد
-    window.open(url, '_blank');
 }
 </script>
 <!-- الفوتر (Footer) -->
