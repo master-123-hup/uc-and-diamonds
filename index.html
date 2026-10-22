@@ -538,15 +538,28 @@
             document.getElementById('tab-pubg').style.border = 'none';
         }
     }
-        function navTo(pageId, el) {
-        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-        const targetPage = document.getElementById('page-' + pageId);
-        if(targetPage) targetPage.style.display = 'block';
+            function navTo(pageId, el) {
+        // إخفاء جميع الصفحات
+        document.querySelectorAll('.page').forEach(p => {
+            p.style.display = 'none';
+            p.classList.remove('active');
+        });
         
+        // إظهار الصفحة المطلوبة
+        const targetPage = document.getElementById('page-' + pageId);
+        if (targetPage) {
+            targetPage.style.display = 'block';
+            targetPage.classList.add('active');
+        }
+        
+        // تحديث شكل أزرار التنقل
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if (el) el.classList.add('active');
         
-        if(pageId === 'orders') loadOrders();
+        // إذا كانت الصفحة هي "طلباتي"، قم بتحميل الطلبات
+        if (pageId === 'orders') {
+            loadOrders();
+        }
     }
 
     // ================== 4. المتجر والشراء ==================
@@ -989,7 +1002,7 @@
         }
     }
     // ================== دالة فتح عروض CPAGrip داخل التطبيق ==================
-    function openCPAGrip() {
+        function openCPAGrip() {
         if (!currentUser) {
             showToast("الرجاء تسجيل الدخول أولاً");
             return;
@@ -1000,20 +1013,35 @@
         // إذا كانت الحاوية مخفية، نظهرها وندخل السكريبت
         if (container.style.display === 'none') {
             container.style.display = 'block';
+            container.innerHTML = ''; // مسح أي محتوى سابق
             
-            // مسح أي محتوى سابق
-            container.innerHTML = '';
-            
-            // إنشاء عنصر السكريبت
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            // الرابط الذي نسخته من CPAGrip مع إضافة tracking_id
-            script.src = 'https://installyourfiles.com/script_include.php?id=1919303&tracking_id=' + currentUser.uid;
-            
-            // إضافة السكريبت إلى الصفحة
-            container.appendChild(script);
-            
-            // التمرير إلى الأسفل لكي يرى المستخدم العروض
+            // إنشاء iframe لعزل السكريبت
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '100%';
+            iframe.style.height = '800px'; // يمكنك تعديل الارتفاع حسب الحاجة
+            iframe.style.border = 'none';
+            iframe.style.overflow = 'hidden';
+            container.appendChild(iframe);
+
+            // كتابة كود CPAGrip داخل الـ iframe مع تمرير tracking_id
+            const iframeDoc = iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>body { margin: 0; padding: 0; background: #0a0a0a; }</style>
+                </head>
+                <body>
+                    <script type="text/javascript" src="https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}"><\/script>
+                </body>
+                </html>
+            `);
+            iframeDoc.close();
+
+            // التمرير إلى الحاوية لكي يرى المستخدم العروض
             container.scrollIntoView({ behavior: 'smooth' });
         } else {
             // إذا كانت مفتوحة، نقوم بإخفائها
