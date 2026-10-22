@@ -193,6 +193,11 @@
 
 <!-- صفحة المهام الجديدة -->
 <div id="page-tasks" class="page" style="display:none;">
+<!-- حاوية عروض CPAGrip -->
+<div id="cpagrip-offers-box" style="margin-top: 20px; display: none; width: 100%; min-height: 500px;">
+    <!-- سيتم حقن كود CPAGrip هنا -->
+</div>
+<button class="btn" onclick="loadCPAGripOffers()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
     <h2 style="color:#ffba00; margin-bottom:20px; text-align:center;">المهام والعروض</h2>
     <div class="card" style="text-align:center; display:block; background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333;">
         <p style="margin-bottom:10px; color:#888;">رصيدك الحالي للبدء:</p>
@@ -201,11 +206,9 @@
     </div>
         <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
         <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
-        <button class="btn" onclick="openCPAGrip()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
     </div>
 </div>
-<!-- حاوية لإعلانات CPAGrip -->
-<div id="cpagrip-container" style="width: 100%; min-height: 600px; margin-top: 20px; display: none;"></div>
+
 <!-- صفحة المتجر -->
 <div id="page-store" class="page" style="display:none;">
     <h2 style="color:var(--primary); margin-bottom:20px; text-align:center;">متجر الشحن</h2>
@@ -373,6 +376,30 @@
     </div>
 </div>
 <script>
+    function loadCPAGripOffers() {
+        if (!currentUser) {
+            showToast("الرجاء تسجيل الدخول أولاً");
+            return;
+        }
+
+        const offersBox = document.getElementById('cpagrip-offers-box');
+        
+        // إظهار الصندوق ومسح أي محتوى سابق
+        offersBox.style.display = 'block';
+        offersBox.innerHTML = '';
+
+        // إنشاء وسم السكريبت (نفس كود CPAGrip الرسمي)
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        // نمرر tracking_id الخاص بالمستخدم
+        script.src = `https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}`;
+        
+        // حقن السكريبت داخل الصندوق
+        offersBox.appendChild(script);
+
+        // التمرير إلى الصندوق لكي يرى المستخدم العروض
+        offersBox.scrollIntoView({ behavior: 'smooth' });
+    }
     // ================== 1. إعدادات Firebase ==================
     // ضع هنا بيانات Firebase الخاصة بك من لوحة تحكم Firebase
         const firebaseConfig = {
@@ -1001,54 +1028,30 @@
             }).catch(err => showToast("خطأ: " + err.message));
         }
     }
-    // ================== دالة فتح عروض CPAGrip داخل التطبيق ==================
-        function openCPAGrip() {
+        function loadCPAGripOffers() {
         if (!currentUser) {
             showToast("الرجاء تسجيل الدخول أولاً");
             return;
         }
 
-        const container = document.getElementById('cpagrip-container');
+        const offersBox = document.getElementById('cpagrip-offers-box');
         
-        // إذا كانت الحاوية مخفية، نظهرها وندخل السكريبت
-        if (container.style.display === 'none') {
-            container.style.display = 'block';
-            container.innerHTML = ''; // مسح أي محتوى سابق
-            
-            // إنشاء iframe لعزل السكريبت
-            const iframe = document.createElement('iframe');
-            iframe.style.width = '100%';
-            iframe.style.height = '800px'; // يمكنك تعديل الارتفاع حسب الحاجة
-            iframe.style.border = 'none';
-            iframe.style.overflow = 'hidden';
-            container.appendChild(iframe);
+        // إظهار الصندوق ومسح أي محتوى سابق
+        offersBox.style.display = 'block';
+        offersBox.innerHTML = '';
 
-            // كتابة كود CPAGrip داخل الـ iframe مع تمرير tracking_id
-            const iframeDoc = iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>body { margin: 0; padding: 0; background: #0a0a0a; }</style>
-                </head>
-                <body>
-                    <script type="text/javascript" src="https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}"><\/script>
-                </body>
-                </html>
-            `);
-            iframeDoc.close();
+        // إنشاء وسم السكريبت (نفس كود CPAGrip الرسمي)
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        // نمرر tracking_id الخاص بالمستخدم
+        script.src = `https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}`;
+        
+        // حقن السكريبت داخل الصندوق
+        offersBox.appendChild(script);
 
-            // التمرير إلى الحاوية لكي يرى المستخدم العروض
-            container.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            // إذا كانت مفتوحة، نقوم بإخفائها
-            container.style.display = 'none';
-            container.innerHTML = '';
-        }
-    }
+        // التمرير إلى الصندوق لكي يرى المستخدم العروض
+        offersBox.scrollIntoView({ behavior: 'smooth' });
+    }    
 </script>
 <!-- الفوتر (Footer) -->
 <footer style="text-align: center; padding: 20px; background: #111; color: #888; font-size: 12px; margin-top: 50px; border-top: 1px solid #333;">
