@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script type="text/javascript" src="https://installyourfiles.com/script_include.php?id=1919303"></script>
     <!-- كود تثبيت التطبيق PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffba00">
@@ -204,7 +203,7 @@
     
     <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
         <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
-        <button class="btn" onclick="loadCPAGripOffers()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
+        <button class="btn" onclick="if(currentUser) { window.open('https://www.cpagrip.com/view.php?id=1919303&tracking_id=' + currentUser.uid, '_blank'); } else { showToast('الرجاء تسجيل الدخول أولاً'); }" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
     </div>
 
     <!-- حاوية عروض CPAGrip (تظهر فقط عند الضغط على الزر) -->
@@ -1011,32 +1010,64 @@
             }).catch(err => showToast("خطأ: " + err.message));
         }
     }
-        function loadCPAGripOffers() {
-        if (!currentUser) {
-            showToast("الرجاء تسجيل الدخول أولاً");
-            return;
+
+    // ================== 15. استقبال النقاط من CPAGrip ==================
+// هذا الكود يتحقق من وجود نقاط في الرابط، ويضيفها إلى Firebase
+window.addEventListener('load', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pointsToAdd = urlParams.get('points');
+    const secretKey = urlParams.get('secret');
+
+    // المفتاح السري لكي لا يستطيع أي شخص إضافة نقاط وهمية
+    if (pointsToAdd && secretKey === 'MySuperSecretKey123') {
+        if (currentUser) {
+            try {
+                // جلب النقاط الحالية للمستخدم
+                const userRef = db.collection("users").doc(currentUser.uid);
+                const doc = await userRef.get();
+                
+                if (doc.exists) {
+                    const currentPoints = doc.data().points || 0;
+                    const newPoints = currentPoints + parseInt(pointsToAdd);
+                    
+                    // تحديث النقاط في Firebase
+                    await userRef.update({ points: newPoints });
+                    
+                    // إظهار رسالة للمستخدم
+                    showToast(`تمت إضافة ${pointsToAdd} نقطة بنجاح! 🎉`);
+                    
+                    // تنظيف الرابط لكي لا يتم إضافة النقاط مرة أخرى عند تحديث الصفحة
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (e) {
+                console.error("خطأ في إضافة النقاط:", e);
+            }
+        } else {
+            // إذا لم يكن المستخدم مسجل دخول، نحفظ النقاط في ذاكرة المتصفح لحين تسجيل الدخول
+            localStorage.setItem('pending_points', pointsToAdd);
         }
+    }
 
-        const offersBox = document.getElementById('cpagrip-offers-box');
-        
-        // إظهار الصندوق ومسح أي محتوى سابق
-        offersBox.style.display = 'block';
-        offersBox.innerHTML = '';
-
-        // إنشاء وسم السكريبت (نفس كود CPAGrip الرسمي)
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        // نمرر tracking_id الخاص بالمستخدم
-        script.src = `https://installyourfiles.com/script_include.php?id=1919303&tracking_id=${currentUser.uid}`;
-        
-        // حقن السكريبت داخل الصندوق
-        offersBox.appendChild(script);
-
-        // التمرير إلى الصندوق لكي يرى المستخدم العروض
-        offersBox.scrollIntoView({ behavior: 'smooth' });
-    }    
-
-    
+    // التحقق من وجود نقاط معلقة بعد تسجيل الدخول
+    if (currentUser) {
+        const pendingPoints = localStorage.getItem('pending_points');
+        if (pendingPoints) {
+            try {
+                const userRef = db.collection("users").doc(currentUser.uid);
+                const doc = await userRef.get();
+                if (doc.exists) {
+                    const currentPoints = doc.data().points || 0;
+                    const newPoints = currentPoints + parseInt(pendingPoints);
+                    await userRef.update({ points: newPoints });
+                    showToast(`تمت إضافة ${pendingPoints} نقطة معلقة بنجاح! 🎉`);
+                    localStorage.removeItem('pending_points');
+                }
+            } catch (e) {
+                console.error("خطأ في إضافة النقاط المعلقة:", e);
+            }
+        }
+    }
+});
 </script>
 <!-- الفوتر (Footer) -->
 <footer style="text-align: center; padding: 20px; background: #111; color: #888; font-size: 12px; margin-top: 50px; border-top: 1px solid #333;">
