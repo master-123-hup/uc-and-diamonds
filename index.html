@@ -194,16 +194,39 @@
 <!-- صفحة المهام الجديدة -->
 <div id="page-tasks" class="page" style="display:none;">
     <h2 style="color:#ffba00; margin-bottom:20px; text-align:center;">المهام والعروض</h2>
-    
+    <div style="background: rgba(255, 186, 0, 0.1); border-right: 4px solid #ffba00; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+    <p style="color: #ffba00; font-size: 12px; line-height: 1.5;">
+        ⚠️ <b>ملاحظة هامة:</b> خذ لقطة شاشة بعد إكمال المهمة وأرسلها على البريد <b>sfntysfynty@gmail.com</b> مع بريدك و ID الخاص بك. بدونها لن تحصل على النقاط.
+    </p>
+</div>
     <div class="card" style="text-align:center; display:block; background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333;">
         <p style="margin-bottom:10px; color:#888;">رصيدك الحالي للبدء:</p>
         <h3 style="color:#ffba00; font-size:24px; margin-bottom:15px;"><span class="tasks-points">0</span> نقطة</h3>
         <button class="btn btn-outline" onclick="updateUI()" style="border: 2px solid #ffba00; color: #ffba00; background: transparent;">🔄 تحديث الرصيد</button>
     </div>
     
-    <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
         <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
-        <button class="btn" onclick="if(currentUser) { window.open('offers.html?uid=' + currentUser.uid, '_blank'); } else { showToast('الرجاء تسجيل الدخول أولاً'); }" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (CPAGrip) 🎮</button>
+        <button class="btn" onclick="openZeydooOffers()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (Zeydoo) 🎮</button>
+    </div>
+    <button class="btn btn-outline" onclick="sendProofToAdmin()" style="border-color: #007bff; color: #007bff; margin-top: 10px;">📩 أرسلت الإثبات على البريد</button>
+
+    <!-- تنبيهات مهمة للاعبين -->
+    <div style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 10px; border: 1px dashed #ffba00; text-align: right;">
+        <h4 style="color: #ffba00; font-size: 15px; margin-bottom: 8px;">📢 ملاحظات هامة جداً:</h4>
+        <ul style="color: #ccc; font-size: 13px; line-height: 1.8; padding-right: 20px;">
+            <li><b>لا تقلق عزيزي اللاعب:</b> كل عرض تقوم بإكماله، ستصلك نقاطه إلى حسابك فور التأكد من الإدارة.</li>
+            <li><b>⚠️ تحذير من الـ VPN:</b> يمنع منعاً باتاً استخدام أي تطبيق VPN أثناء إكمال العروض. استخدام الـ VPN سيؤدي إلى حظر حسابك في شبكة العروض ولن تصلك أي نقاط.</li>
+        </ul>
+        
+        <p style="color: #ccc; font-size: 13px; margin-bottom: 10px; margin-top: 10px;">
+            ⚠️ بعد إكمال العرض، أرسل <b>لقطة شاشة (Screenshot)</b> للإدارة عبر البريد الإلكتروني:
+        </p>
+        <a href="mailto:sfntysfynty@gmail.com?subject=إثبات%20إكمال%20عرض%20-%20My%20Rewards&body=مرحباً،%20أنا%20اللاعب:%20[اكتب%20اسمك%20هنا]%0Aلقد%20أكملت%20عرضاً%20وأرفقت%20الصورة.%20يرجى%20إضافة%20النقاط."
+           class="btn"
+           style="background: #007bff; color: #fff; text-decoration: none; display: inline-block; width: auto; padding: 10px 20px; margin-top: 5px;">
+           📧 إرسال الإثبات عبر البريد
+        </a>
     </div>
 
     <!-- حاوية عروض CPAGrip (تظهر فقط عند الضغط على الزر) -->
@@ -302,9 +325,10 @@
     </div>
 
         <!-- أزرار التنقل داخل الأدمن -->
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
         <button class="btn" onclick="showAdminTab('orders')" id="btn-tab-orders" style="padding:10px; font-size:14px;">الطلبات</button>
         <button class="btn btn-outline" onclick="showAdminTab('users')" id="btn-tab-users" style="padding:10px; font-size:14px;">اللاعبين</button>
+        <button class="btn btn-outline" onclick="showAdminTabSupport()" id="btn-tab-support" style="padding:10px; font-size:14px;">الرسائل</button>
     </div>
 
     <!-- قسم الطلبات -->
@@ -320,12 +344,21 @@
         <div id="admin-orders-list"></div>
     </div>
 
-    <!-- قسم اللاعبين -->
+        <!-- قسم اللاعبين -->
     <div id="admin-tab-users" style="display:none;">
         <div id="admin-users-list"></div>
     </div>
-</div>
 
+    <!-- قسم الرسائل -->
+    <div id="admin-tab-support" style="display:none;">
+        <div style="display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto;">
+            <button class="btn btn-outline" id="filter-msg-all" onclick="filterSupport('all')" style="padding:8px; font-size:12px; flex:1;">الكل</button>
+            <button class="btn btn-outline" id="filter-msg-unread" onclick="filterSupport('unread')" style="padding:8px; font-size:12px; flex:1;">غير مقروء</button>
+            <button class="btn btn-outline" id="filter-msg-read" onclick="filterSupport('read')" style="padding:8px; font-size:12px; flex:1;">مقروء</button>
+        </div>
+        <div id="admin-support-list"></div>
+    </div>
+</div> <!-- هذا القوس يغلق لوحة الأدمن، يجب أن يكون هنا في النهاية -->
 
 <!-- شريط التنقل السفلي -->
 <div class="bottom-nav" id="main-nav" style="display:none;">
@@ -1068,17 +1101,117 @@ window.addEventListener('load', async () => {
         }
     }
 });
-function openCPAGrip() {
+function openZeydooOffers() {
     if (!currentUser) {
         showToast("الرجاء تسجيل الدخول أولاً");
         return;
     }
     
-    // الرابط العام الذي نسخناه من CPAGrip
-    const lockerUrl = `https://installyourfiles.com/1919420/?tracking_id=${currentUser.uid}`;
+    // رابط Zeydoo الخاص بك (بدون var و ymid لتجنب الأخطاء)
+    const zeydooLink = `https://nya5.com/link?z=12114647`;
     
-    // فتح الرابط في نافذة جديدة (لن يقفل التطبيق)
-    window.open(lockerUrl, '_blank');
+    // فتح الرابط في نافذة جديدة (لأن iframe ممنوع)
+    window.open(zeydooLink, '_blank');
+    
+    // تذكير اللاعب بضرورة أخذ صورة للإثبات
+    showToast("بعد إكمال العرض، يرجى أخذ صورة (Screenshot) وإرسالها للإدارة لإضافة النقاط.");
+}
+// ================== 16. إرسال الإثبات للإدارة ==================
+async function sendProofToAdmin() {
+    if (!currentUser) {
+        showToast("الرجاء تسجيل الدخول أولاً");
+        return;
+    }
+
+    try {
+        // حفظ الرسالة في قاعدة البيانات لكي تظهر في لوحة الأدمن
+        await db.collection("support_tickets").add({
+            userId: currentUser.uid,
+            userEmail: currentUser.email || "غير متوفر",
+            message: `أنا [${currentUser.uid}] أتممت مهمة وأرسلت لقطة الشاشة على البريد.`,
+            status: "unread",
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showToast("✅ تم إرسال الإشعار للإدارة. يرجى الانتظار حتى يتم مراجعة الصورة وإضافة النقاط.");
+        
+    } catch (e) {
+        console.error("خطأ في إرسال الإثبات:", e);
+        showToast("حدث خطأ أثناء الإرسال: " + e.message);
+    }
+}
+// ================== 17. إدارة رسائل الدعم في لوحة الأدمن ==================
+let allSupportTickets = [];
+
+function showAdminTabSupport() {
+    document.getElementById('admin-tab-orders').style.display = 'none';
+    document.getElementById('admin-tab-users').style.display = 'none';
+    document.getElementById('admin-tab-support').style.display = 'block';
+    
+    document.getElementById('btn-tab-orders').classList.remove('btn'); document.getElementById('btn-tab-orders').classList.add('btn-outline');
+    document.getElementById('btn-tab-users').classList.remove('btn'); document.getElementById('btn-tab-users').classList.add('btn-outline');
+    document.getElementById('btn-tab-support').classList.remove('btn-outline'); document.getElementById('btn-tab-support').classList.add('btn');
+    
+    loadSupportTickets();
+}
+
+function loadSupportTickets() {
+    const list = document.getElementById('admin-support-list');
+    list.innerHTML = '<p style="text-align:center; color:#888;">جاري التحميل...</p>';
+    
+    db.collection("support_tickets").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+        allSupportTickets = [];
+        snapshot.forEach(doc => {
+            const ticket = doc.data();
+            ticket.id = doc.id;
+            allSupportTickets.push(ticket);
+        });
+        filterSupport('all');
+    });
+}
+
+function filterSupport(status) {
+    const list = document.getElementById('admin-support-list');
+    list.innerHTML = '';
+    
+    const filtered = status === 'all' ? allSupportTickets : allSupportTickets.filter(t => t.status === status);
+    
+    if (filtered.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:#888;">لا توجد رسائل.</p>';
+        return;
+    }
+
+    filtered.forEach(ticket => {
+        const isUnread = ticket.status === 'unread';
+        const bgColor = isUnread ? '#2a2a2a' : '#151515';
+        
+        list.innerHTML += `
+            <div class="admin-row" style="flex-direction: column; align-items: flex-start; background: ${bgColor}; border: 1px solid ${isUnread ? '#007bff' : '#333'};">
+                <div style="width:100%; margin-bottom: 10px;">
+                    <p><b>المستخدم:</b> ${ticket.userId}</p>
+                    <p><b>البريد:</b> ${ticket.userEmail}</p>
+                    <p><b>الرسالة:</b> ${ticket.message}</p>
+                    <p><b>الحالة:</b> ${isUnread ? '<span style="color:#007bff;">غير مقروء</span>' : '<span style="color:#00c853;">مقروء</span>'}</p>
+                </div>
+                <div style="display:flex; gap:5px; width:100%;">
+                    ${isUnread ? `<button class="admin-btn" style="flex:1; background:#007bff; color:#fff;" onclick="markAsRead('${ticket.id}')">تحديد كمقروء</button>` : ''}
+                    <button class="admin-btn" style="flex:1; background:#333; color:#fff;" onclick="deleteTicket('${ticket.id}')">حذف</button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+async function markAsRead(ticketId) {
+    await db.collection("support_tickets").doc(ticketId).update({ status: 'read' });
+    showToast("تم تحديد الرسالة كمقروءة");
+}
+
+async function deleteTicket(ticketId) {
+    if (confirm("هل أنت متأكد من حذف هذه الرسالة؟")) {
+        await db.collection("support_tickets").doc(ticketId).delete();
+        showToast("تم حذف الرسالة");
+    }
 }
 </script>
 <!-- الفوتر (Footer) -->
