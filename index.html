@@ -165,9 +165,12 @@
     <p class="login-footer">يجب تسجيل الدخول لحفظ نقاطك وتجنب ضياعها</p>
 </div>
 <!-- الشريط العلوي (يحتوي على الشعار السري) -->
-<div class="header" id="main-header" style="display:none;">
-    <h1 id="secret-admin-logo" style="cursor: pointer; -webkit-tap-highlight-color: transparent;">My Rewards</h1>
-    <div class="balance">رصيدك: <span id="user-points">0</span> نقطة</div>
+<div class="header" id="main-header" style="display:none; flex-wrap: wrap; justify-content: center; gap: 5px;">
+    <h1 id="secret-admin-logo" style="cursor: pointer; -webkit-tap-highlight-color: transparent; font-size: 16px;">My Rewards</h1>
+    <div class="balance" style="font-size: 12px;">رصيدك: <span id="user-points">0</span> نقطة</div>
+    <div style="width: 100%; text-align: center; font-size: 10px; color: #00c853; margin-top: 5px;">
+        🔒 نقاطك وأموالك في أمان تام 100%
+    </div>
 </div>
 <!-- الصفحة الرئيسية الجديدة -->
 <div id="page-home" class="page active" style="display:none;">
@@ -196,6 +199,9 @@
     <h2 style="color:#ffba00; margin-bottom:20px; text-align:center;">المهام والعروض</h2>
     <div style="background: rgba(255, 186, 0, 0.1); border-right: 4px solid #ffba00; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
     <p style="color: #ffba00; font-size: 12px; line-height: 1.5;">
+        <div style="text-align: center; color: #00c853; font-size: 13px; margin-bottom: 15px; font-weight: bold;">
+        🛡️ جميع العمليات آمنة ونقاطك محفوظة في حسابك.
+    </div>
         ⚠️ <b>ملاحظة هامة:</b> خذ لقطة شاشة بعد إكمال المهمة وأرسلها على البريد <b>sfntysfynty@gmail.com</b> مع بريدك و ID الخاص بك. بدونها لن تحصل على النقاط.
     </p>
 </div>
@@ -205,10 +211,26 @@
         <button class="btn btn-outline" onclick="updateUI()" style="border: 2px solid #ffba00; color: #ffba00; background: transparent;">🔄 تحديث الرصيد</button>
     </div>
     
-        <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
+            <div style="text-align:center; margin-top:30px; display:flex; flex-direction:column; gap:10px;">
         <button class="btn" onclick="startEarning('cpx')" style="background:#fff; color:#000;">إكمال الاستبيانات (CPX) 📋</button>
         <button class="btn" onclick="openZeydooOffers()" style="background:#2ecc71; color:#fff;">أكمل العروض والألعاب (Zeydoo) 🎮</button>
-    </div>
+        
+                <!-- زر CPAlead الجديد -->
+        <a href="#" 
+           data-interact-trigger 
+           data-tool-id="67640" 
+           data-tool-slug="Ad9JU"
+           data-subid="" 
+           class="btn" 
+           style="background:#ffba00; color:#000; text-decoration:none; display:block; padding:15px; border-radius:10px; font-weight:bold;">
+           احصل على 100 جوهرة (100 نقطة) 💎
+        </a>
+        <!-- التنبيه الجديد -->
+        <p style="color: #ff6b6b; font-size: 12px; margin-top: -5px; margin-bottom: 15px; text-align: center;">
+            ⚠️ يجب عليك إرسال الإثبات على البريد الإلكتروني عند انتهائك من المهمة.
+        </p>
+    
+    <!-- زر إثبات الدفع -->
     <button class="btn btn-outline" onclick="sendProofToAdmin()" style="border-color: #007bff; color: #007bff; margin-top: 10px;">📩 أرسلت الإثبات على البريد</button>
 
     <!-- تنبيهات مهمة للاعبين -->
@@ -1223,5 +1245,8 @@ async function deleteTicket(ticketId) {
         <a href="contact.html" style="color: #ffba00; text-decoration: none; margin: 0 10px;">Contact Us</a>
     </div>
 </footer>
+<!-- كود CPAlead Overlay -->
+<script>window.CPAlead_PublisherUserId = 3367926;</script>
+<script src="https://cdnflair.com/js/interact-form.js" async defer></script>
 </body>
 </html>
